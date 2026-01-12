@@ -1,6 +1,5 @@
 <?php
-if(!defined('_Khanh'))
-{
+if (!defined('_Khanh')) {
     die('Truy cập không hợp lệ');
 }
 $data = [
@@ -13,98 +12,92 @@ layout('header-auth', $data);
 -Validate dữ liệu nhập vào
 -Check dữ liệu với csdl (email và pass)
 -Dữ liệu khớp -> tokenlogin -> insert vào bảng token_login để kiểm tra đăng nhập
+-Kiểm tra đăng nhập
++Gán token_login lên session
++trong header -> lấy token từ session và so khớp với token trong bảng token_login
 -Điều hướng đến trang dashboard
+-Đăng nhập tài khoản ở 1 nơi tại 1 thời điểm
 */
 
-if(isPost())
-{
+if (isPost()) {
     $filter = filterData();
     $errors = [];
 
     //validate email
-    if(empty($filter['email']))
-    {
+    if (empty($filter['email'])) {
         $errors['email']['required'] = 'Email bắt buột phải nhập';
-    }
-    else
-    {
+    } else {
         //Đúng định dạng email 
-        if(!validateEmail(trim($filter['email'])))
-        {
-             $errors['email']['isEmail'] = 'Email không đúng định dạng';
+        if (!validateEmail(trim($filter['email']))) {
+            $errors['email']['isEmail'] = 'Email không đúng định dạng';
         }
     }
-     //validate Password
-    if(empty(trim($filter['password'])))
-    {
-         $errors['password']['required'] = 'Mật bắt buột phải nhập';
-    }
-    else
-    {
-        if(strlen(trim($filter['password'])) < 6)
-        {
-             $errors['password']['length'] = 'Mật khẩu phải lớn hơn 6 ký tự';
+    //validate Password
+    if (empty(trim($filter['password']))) {
+        $errors['password']['required'] = 'Mật bắt buột phải nhập';
+    } else {
+        if (strlen(trim($filter['password'])) < 6) {
+            $errors['password']['length'] = 'Mật khẩu phải lớn hơn 6 ký tự';
         }
     }
 
-    if(empty($errors))
-    {
+    if (empty($errors)) {
         //kiểm tra dữ liệu
         $email = $filter['email'];
         $password = $filter['password'];
 
         //kiểm tra email
         $checkEmail = getOne("SELECT * FROM users WHERE email = '$email'");
-        
-        if(!empty($checkEmail))
-        {
-            if(!empty($password))
-            {
-                $checkStatus = password_verify($password, $checkEmail['password']);         
-                if($checkStatus)
-                {
-                    //tạo token và insert vào bảng token_login
-                    $token = sha1(uniqid() . time());
-                    $data = [
-                        'token' => $token,
-                        'created_at' => date('Y:m:d H:i:s'),
-                        'user_id' => $checkEmail['id']
-                    ];
-                    $insertToken = insert('token_login', $data);
-                    if($insertToken)
-                    {
-                        setSessionFlash('msg', 'Đăng nhập thành công.');
-                        setSessionFlash('msg_type', 'success');
 
-                        redirect('/');
-                    }
-                    else
-                    {
-                        setSessionFlash('msg', 'Đăng nhập không thành công.');  
+        if (!empty($checkEmail)) {
+            if (!empty($password)) {
+                $checkStatus = password_verify($password, $checkEmail['password']);
+                if ($checkStatus) {
+                    //tài khoản chỉ login 1 nơi
+                    $user_id = $checkEmail['id'];
+                    $checkAlready = getRows("SELECT * FROm token_login WHERE user_id = $user_id");
+                    if ($checkAlready > 0) {
+                        setSessionFlash('msg', 'Tài khoản đang được đăng nhập nơi khác vui lòng thử lại sau.');
                         setSessionFlash('msg_type', 'danger');
+                        redirect('?module=auth&action=login');
+                    } else {
+                        //tạo token và insert vào bảng token_login
+                        $token = sha1(uniqid() . time());
+
+                        //gán token lên session
+                        setSession('token_login', $token);
+
+                        $data = [
+                            'token' => $token,
+                            'created_at' => date('Y:m:d H:i:s'),
+                            'user_id' => $checkEmail['id']
+                        ];
+                        $insertToken = insert('token_login', $data);
+                        if ($insertToken) {
+                            redirect('/');
+                        } else {
+                            setSessionFlash('msg', 'Đăng nhập không thành công.');
+                            setSessionFlash('msg_type', 'danger');
+                        }
                     }
-                }
-                else
-                {
-                    setSessionFlash('msg', 'Vui lòng kiểm tra lại dữ liệu nhập vào.');  
-                    setSessionFlash('msg_type', 'danger'); 
+                } else {
+                    setSessionFlash('msg', 'Vui lòng kiểm tra lại dữ liệu nhập vào.');
+                    setSessionFlash('msg_type', 'danger');
                 }
             }
         }
-    }
-    else
-    {
-        setSessionFlash('msg', 'Vui lòng kiểm tra lại dữ liệu nhập vào.');  
-        setSessionFlash('msg_type', 'danger'); 
+    } else {
+        setSessionFlash('msg', 'Vui lòng kiểm tra lại dữ liệu nhập vào.');
+        setSessionFlash('msg_type', 'danger');
         setSessionFlash('oldData', $filter);
         setSessionFlash('errors', $errors);
     }
 }
-        //lưu lại dữ liệu cũ khi nhập vào ô input
-    $msg = getSessionFlash('msg');
-    $msg_type = getSessionFlash('msg_type');
-    $oldData = getSessionFlash('oldData');
-    $errorsArr =   getSessionFlash('errors');
+//lưu lại dữ liệu cũ khi nhập vào ô input
+$msg = getSessionFlash('msg');
+$msg_type = getSessionFlash('msg_type');
+$oldData = getSessionFlash('oldData');
+$errorsArr =   getSessionFlash('errors');
 
 ?>
 <section class="vh-100">
@@ -115,10 +108,9 @@ if(isPost())
                     alt="Sample image">
             </div>
             <div class="col-md-8 col-lg-6 col-xl-4 offset-xl-1">
-                <?php 
-                if(!empty($msg) & !empty($msg_type))
-                {
-                     getMsg($msg,$msg_type);
+                <?php
+                if (!empty($msg) & !empty($msg_type)) {
+                    getMsg($msg, $msg_type);
                 }
                 ?>
                 <form method="POST" action="" enctype="multipart/form-data">
@@ -127,17 +119,15 @@ if(isPost())
                     </div>
                     <!-- Email input -->
                     <div data-mdb-input-init class="form-outline mb-4">
-                        <input type="email" value="<?php 
-                         if(!empty($oldData))
-                        {
-                             echo oldData($oldData, 'email');
-                        }
-                      ?>" name="email" id="form3Example3" class="form-control form-control-lg"
+                        <input type="email" value="<?php
+                                                    if (!empty($oldData)) {
+                                                        echo oldData($oldData, 'email');
+                                                    }
+                                                    ?>" name="email" id="form3Example3" class="form-control form-control-lg"
                             placeholder="Nhập địa chỉ email" />
                         <?php
-                         if(!empty($errorsArr))
-                        {
-                           echo formError($errorsArr, 'email');
+                        if (!empty($errorsArr)) {
+                            echo formError($errorsArr, 'email');
                         }
                         ?>
                     </div>
@@ -146,9 +136,8 @@ if(isPost())
                         <input type="password" name="password" id="form3Example4" class="form-control form-control-lg"
                             placeholder="Nhập mật khẩu" />
                         <?php
-                         if(!empty($errorsArr))
-                        {
-                           echo formError($errorsArr, 'password');
+                        if (!empty($errorsArr)) {
+                            echo formError($errorsArr, 'password');
                         }
                         ?>
                     </div>
