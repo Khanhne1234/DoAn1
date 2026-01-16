@@ -1,12 +1,10 @@
 <?php
-if(!defined('_Khanh'))
-{
+if (!defined('_Khanh')) {
     die('Truy cập không hợp lệ');
 }
 
 //kiểm tra đăng nhập 
-if(!isLogin())
-{
+if (!isLogin()) {
     redirect('?module=auth&action=login');
 }
 ?>
@@ -41,8 +39,8 @@ if(!isLogin())
     <!--begin::Required Plugin(AdminLTE)-->
     <link rel="stylesheet" href="<?php echo _HOST_URL_TEMPLATES;  ?>/assets/css/adminlte.css" />
     <link rel="stylesheet" href="<?php echo _HOST_URL_TEMPLATES;  ?>/assets/css/custom.css?ver<?php echo rand(); ?>" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"/>
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+
     <!--end::Required Plugin(AdminLTE)-->
     <!-- apexcharts -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts@3.37.1/dist/apexcharts.css"
